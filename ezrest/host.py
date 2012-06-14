@@ -1,3 +1,4 @@
+import time
 import urllib2
 
 import exceptions
@@ -102,18 +103,25 @@ class HostController(object):
 
         if post:
             if post.requires_multipart:
-                post = post.to_multipart()
-                print 'TODO: Update headers to support multipart'
+                print 'MULTIPART'
+                boundary = self.create_multipart_boundary()
+                post = post.to_multipart(boundary)
+                headers['MIME-Version'] = '1.0'
+                headers['Content-Type'] = 'multipart/mixed; boundary=%s' % boundary
             else:
+                print 'NON-MULTIPART'
                 post = post.to_post()
 
         new_headers = self.get_request_headers(method, url, get_data=get, post_data=post, instance=instance)
         headers.update(**new_headers)
 
-#        print 'RAW REQUEST: URL:', url
-#        print 'RAW REQUEST: GET:', get
-#        print 'RAW REQUEST: POST:', post
-#        print 'RAW REQUEST: HEADERS:', headers
+        print 'RAW REQUEST: URL:', url
+        print 'RAW REQUEST: METHOD:', method
+        print 'RAW REQUEST: GET:', get
+        print 'RAW REQUEST: POST:', post
+        print 'RAW REQUEST: HEADERS:'
+        for d in headers.iteritems():
+            print '\t%s: %s' % d
 
         request = urllib2.Request(url, data=post, headers=headers)
         request.get_method = lambda: method
@@ -131,6 +139,9 @@ class HostController(object):
 
     def handle_response(self, instance, response):
         return instance
+
+    def create_multipart_boundary(self):
+        return 'MIMEMULTIPARTBOUNDARY%sMIMEMULTIPARTBOUNDARY' % (int(time.time()))
 
 
 

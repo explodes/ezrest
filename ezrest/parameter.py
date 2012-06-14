@@ -1,3 +1,4 @@
+import base64
 import urllib
 
 import exceptions
@@ -45,11 +46,19 @@ class Parameter(object):
         if value is None:
             return None
         clean = self.clean(value)
-        return (self.remote_name, clean)
+        return (self.remote_name, clean, self.content_type(value), self.content_transfer_encoding(value), self.content_disposition(value))
 
-    @property
-    def requires_multipart(self):
+    def requires_multipart(self, value):
         return False
+
+    def content_type(self, value):
+        return 'text/plain'
+
+    def content_transfer_encoding(self, value):
+        return None
+
+    def content_disposition(self, value):
+        return 'form-data; name="%s"' % self.remote_name
 
     def __str__(self):
         return '%s %s' % (self.__class__.__name__, self.local_name)
@@ -87,8 +96,8 @@ class UnnumberedArrayParameter(Parameter):
             params.append(param)
         else:
             for index, item in enumerate(value):
-                param = self.to_index_param(index, item)
-                params.append(param)
+                name, val = self.to_index_param(index, item)
+                params.append((name, val, self.content_type, self.content_transfer_encoding, self.content_disposition))
         return params
 
     def to_index_param(self, index, value):
@@ -115,3 +124,29 @@ class NumberedArrayParameter(UnnumberedArrayParameter):
 
 class NumberedIntegerArrayParameter(NumberedArrayParameter, IntegerParameter):
     pass
+
+
+class FileParameter(Parameter):
+
+    def __init__(self, file_name, **kwargs):
+        self.file_name = file_name
+        super(FileParameter, self).__init__(**kwargs)
+
+    def escape(self, value):
+        if value:
+            return base64.b64encode(value)
+
+    def requires_multipart(self, value):
+        return bool(value)
+
+    def content_type(self, value):
+        return 'application/octet-stream'
+
+    def content_transfer_encoding(self, value):
+        return 'base64'
+
+    def content_disposition(self, value):
+        file_name = self.file_name() if callable(self.file_name) else self.file_name
+        return 'attachment; filename=%s' % file_name
+
+

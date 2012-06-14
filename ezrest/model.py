@@ -1,5 +1,13 @@
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 from parameter import Parameter
 from ezrest.lib import helpers
+
+CRLF = '\r\n'
+CRLF2 = CRLF * 2
 
 class SerialList(object):
 
@@ -10,14 +18,26 @@ class SerialList(object):
     def to_post(self):
         return self.to_get()
 
-    def to_multipart(self):
-        print 'MULTIPART NOT YET IMPLEMENTED'
-        return self.to_post()
+    def to_multipart(self, boundary):
+        io = StringIO()
+        io.write('--%s' % (boundary))
+        for dummy, value, content_type, content_transfer_encoding, content_disposition in self.values:
+            io.write('%sContent-Type: %s%s' % (CRLF, content_type, CRLF))
+            if content_disposition:
+                io.write('Content-Disposition: %s%s' % (content_disposition, CRLF))
+            if content_transfer_encoding:
+                io.write('Content-Transfer-Encoding: %s%s' % (content_transfer_encoding, CRLF))
+            io.write(CRLF)
+            io.write(value)
+            io.write('\n--%s' % boundary)
+        io.write('--')
+        return io.getvalue()
 
     def to_get(self):
         post = []
-        for p in self.values:
-            post.append('='.join(p))
+
+        for name, value, dummy, dummy, dummy in self.values:
+            post.append('%s=%s' % (name, value))
         return '&'.join(post)
 
     def __str__(self):
@@ -85,10 +105,10 @@ class Model(object):
             parameters = parameters[:]
         else:
             parameters = []
-        other_parameters = [helpers.first(lambda parameter: parameter.local_name == name, self._meta.all_parameters) for name in additional_locals]
+        other_parameters = filter(lambda x:bool(x), [helpers.first(lambda parameter: parameter.local_name == name, self._meta.all_parameters) for name in additional_locals])
         parameters.extend(other_parameters)
 
-        requires_multipart = helpers.first(lambda parameter: parameter.requires_multipart, parameters) is not None
+        requires_multipart = helpers.first(lambda parameter: parameter.requires_multipart(getattr(self, parameter.local_name)), parameters) is not None
         serialized_values = self._serialize([parameter.to_param(getattr(self, parameter.local_name)) for parameter in parameters])
         return SerialList(serialized_values, requires_multipart)
 
@@ -100,12 +120,6 @@ class Model(object):
             if p is not None:
                 ps.append(p)
         return ps
-
-    def to_post(self, serialized_parameters):
-        post = []
-        for p in serialized_parameters:
-            post.append('='.join(p))
-        return '&'.join(post)
 
     def parameters(self, *local_parameters):
         return self._get_parameters_for_fields(None, *local_parameters)
