@@ -1,13 +1,11 @@
-from ezrest import parameters
-from ezrest.host import HostController
-from ezrest.models import Model
+from ezrest import host, model, parameter
 
-class ResponseModel(Model):
+class ResponseModel(model.Model):
     ''' Model built to handle a response itself '''
     def response(self, response):
         print 'TODO: Handle the response'
 
-class MozillaClientHostController(HostController):
+class MozillaClientHostController(host.HostController):
 
     def get_request_headers(self, method, url, get_data=None, post_data=None, instance=None):
         d = super(MozillaClientHostController, self).get_request_headers(method, url, get_data=get_data, post_data=post_data, instance=instance)
@@ -15,7 +13,7 @@ class MozillaClientHostController(HostController):
         d['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         return d
 
-class ResponseModelHostController(HostController):
+class ResponseModelHostController(host.HostController):
 
     def handle_response(self, instance, response):
         if isinstance(instance, ResponseModel):
@@ -29,8 +27,8 @@ class GoogleHostController(MozillaClientHostController, ResponseModelHostControl
 
 class GoogleSearch(ResponseModel):
 
-    query = parameters.TextParameter(remote_name='q', read=True)
-    occurrences_of_the_word_pypi = parameters.IntegerParameter()
+    query = parameter.TextParameter(remote_name='q', read=True)
+    occurrences_of_the_word_pypi = parameter.IntegerParameter()
 
     def __init__(self, query):
         self.query = query

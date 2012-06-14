@@ -1,4 +1,4 @@
-from parameters import Parameter
+from parameter import Parameter
 from ezrest.lib import helpers
 
 class SerialList(object):

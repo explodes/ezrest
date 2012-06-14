@@ -9,8 +9,8 @@ class Test(unittest.TestCase):
         pass
 
     def test_parameters(self):
-        from ezrest.models import Model
-        from ezrest.parameters import Parameter, UnsetParameter
+        from ezrest.model import Model
+        from ezrest.parameter import Parameter, UnsetParameter
 
         class MyModel(Model):
             foo = Parameter(create=True)
