@@ -20,6 +20,12 @@ class SerialList(object):
             post.append('='.join(p))
         return '&'.join(post)
 
+    def __str__(self):
+        return self.to_get()
+
+    def __repr__(self):
+        return "%s(%r, %r)" % (self.__class__.__name__, self.values, self.requires_multipart)
+
 class ModelOptions(object):
 
     def __init__(self, options=None):
