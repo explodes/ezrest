@@ -84,8 +84,8 @@ class HostController(object):
     def get_controller_url(self, controller):
         return '%s%s' % (self.host_name, controller)
 
-    def get_request_headers(self, method, url, get=None, post=None, instance=None):
-        length = len(post) if post else 0
+    def get_request_headers(self, method, url, get_data=None, post_data=None, instance=None):
+        length = len(post_data) if post_data else 0
         headers = {'Content-length' : length}
         return headers
 
@@ -95,9 +95,26 @@ class HostController(object):
 
     def raw_request(self, method, url, get=None, post=None, instance=None):
         if get:
+            get = get.to_get()
             url = '%s?%s' % (url, get)
 
-        headers = self.get_request_headers(method, url, get=get, post=post, instance=instance)
+        headers = {}
+
+        if post:
+            if post.requires_multipart:
+                post = post.to_multipart()
+                print 'TODO: Update headers to support multipart'
+            else:
+                post = post.to_post()
+
+        new_headers = self.get_request_headers(method, url, get_data=get, post_data=post, instance=instance)
+        headers.update(**new_headers)
+
+#        print 'RAW REQUEST: URL:', url
+#        print 'RAW REQUEST: GET:', get
+#        print 'RAW REQUEST: POST:', post
+#        print 'RAW REQUEST: HEADERS:', headers
+
         request = urllib2.Request(url, data=post, headers=headers)
         request.get_method = lambda: method
 

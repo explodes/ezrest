@@ -1,14 +1,24 @@
 from parameters import Parameter
+from ezrest.lib import helpers
 
-def first(*args):
-    func, sequence = args
-    if sequence:
-        if func:
-            for x in sequence:
-                if func(x):
-                    return x
-        else:
-            return sequence[0]
+class SerialList(object):
+
+    def __init__(self, values, requires_multipart):
+        self.values = values
+        self.requires_multipart = requires_multipart
+
+    def to_post(self):
+        return self.to_get()
+
+    def to_multipart(self):
+        print 'MULTIPART NOT YET IMPLEMENTED'
+        return self.to_post()
+
+    def to_get(self):
+        post = []
+        for p in self.values:
+            post.append('='.join(p))
+        return '&'.join(post)
 
 class ModelOptions(object):
 
@@ -69,18 +79,27 @@ class Model(object):
             parameters = parameters[:]
         else:
             parameters = []
-        other_parameters = [first(lambda parameter: parameter.local_name == name, self._meta.all_parameters) for name in additional_locals]
+        other_parameters = [helpers.first(lambda parameter: parameter.local_name == name, self._meta.all_parameters) for name in additional_locals]
         parameters.extend(other_parameters)
-        return self._serialize([parameter.to_param(getattr(self, parameter.local_name)) for parameter in parameters])
+
+        requires_multipart = helpers.first(lambda parameter: parameter.requires_multipart, parameters) is not None
+        serialized_values = self._serialize([parameter.to_param(getattr(self, parameter.local_name)) for parameter in parameters])
+        return SerialList(serialized_values, requires_multipart)
 
     def _serialize(self, parameters):
         ps = []
         for p in parameters:
-            if isinstance(p, (list, tuple)):
+            if isinstance(p, list):
                 p = self.serialize(p)
             if p is not None:
                 ps.append(p)
-        return '&'.join(ps)
+        return ps
+
+    def to_post(self, serialized_parameters):
+        post = []
+        for p in serialized_parameters:
+            post.append('='.join(p))
+        return '&'.join(post)
 
     def parameters(self, *local_parameters):
         return self._get_parameters_for_fields(None, *local_parameters)

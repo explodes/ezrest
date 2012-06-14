@@ -44,7 +44,15 @@ class Test(unittest.TestCase):
         obj.maz = 'this is the light'
 
         assert obj.maz == 'this is the light'
-        assert obj.parameters('maz') == 'maz=this is the light'
+
+        serial = obj.parameters('maz')
+
+        assert len(serial.values) == 1
+        assert serial.requires_multipart == False
+        assert serial.to_get() == 'maz=this%20is%20the%20light', serial.to_get()
+        assert serial.to_post() == 'maz=this%20is%20the%20light', serial.to_post() # post vars should look the same as get vars 
+
+
         assert obj2.maz == 56, obj2.maz
 
         obj.foo = 'foo'

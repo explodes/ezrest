@@ -32,6 +32,10 @@ class Parameter(object):
         self.delete = delete
         self.default = default
 
+    def clean(self, value):
+        self.validate(value)
+        return self.escape(value)
+
     def escape(self, value):
         return urllib.quote(str(value))
 
@@ -40,12 +44,17 @@ class Parameter(object):
             raise exceptions.ParameterError('UnsetParameter %r cannot be serialized.' % self.local_name)
 
     def to_param(self, value):
-        ''' Return parameterized key-value pairs. Raise ParameterError on validation error. Can return a list of lists of n lists of parameterized key-value pairs. '''
+        ''' Return parameterized key-value pairs. Raise ParameterError on validation error. Can return a list of lists of n lists of parameterized key-value pairs. 
+        Multi-values return LIST of two-tuples.
+        Single values return two-tuples.'''
         if value is None:
             return None
-        self.validate(value)
-        escaped = self.escape(value)
-        return '%s=%s' % (self.remote_name, escaped)
+        clean = self.clean(value)
+        return (self.remote_name, clean)
+
+    @property
+    def requires_multipart(self):
+        return False
 
     def __str__(self):
         return '%s %s' % (self.__class__.__name__, self.local_name)
@@ -56,24 +65,6 @@ class Parameter(object):
 
 class TextParameter(Parameter):
     pass
-
-
-class PHPArrayParameter(Parameter):
-
-    def to_param(self, value):
-        if value is None:
-            return None
-        if not isinstance(value, (list, tuple)):
-            self.validate(value)
-            escaped = self.escape(value)
-            return '%s[]=%s' % (self.remote_name, escaped)
-        else:
-            params = []
-            for item in value:
-                self.validate(item)
-                escaped = self.escape(item)
-                params.append('%s[]=%s' % (self.remote_name, escaped))
-            return params
 
 class IntegerParameter(Parameter):
 
@@ -87,3 +78,45 @@ class IntegerParameter(Parameter):
         super(IntegerParameter, self).validate(value)
         if not isinstance(value, (int, long)):
             raise exceptions.ParameterError('IntegerParameter %r has a non-integer value %s.' % (self.local_name, value))
+
+
+class UnnumberedArrayParameter(Parameter):
+    ''' Turns a list into foo[]=bar foo[]=baz foo[]=etc '''
+
+    def to_param(self, value):
+        if value is None:
+            return None
+        params = []
+        if not isinstance(value, (list, tuple)):
+            param = self.to_index_param(0, value)
+            params.append(param)
+        else:
+            for index, item in enumerate(value):
+                param = self.to_index_param(index, item)
+                params.append(param)
+        return params
+
+    def to_index_param(self, index, value):
+        clean = self.clean(value)
+        param_name = '%s[]' % (self.remote_name)
+        return (param_name, clean)
+
+class UnnumberedIntegerArrayParameter(UnnumberedArrayParameter, IntegerParameter):
+    pass
+
+class NumberedArrayParameter(UnnumberedArrayParameter):
+    ''' Turns a list into foo[0]=bar foo[1]=baz foo[2]=etc or 
+    foo[1]=bar foo[2]=baz foo[3]=etc depending on the first_index
+    init parameter'''
+
+    def __init__(self, first_index=0, **kwargs):
+        super(UnnumberedArrayParameter, self).__init__(**kwargs)
+        self.first_index = first_index
+
+    def to_index_param(self, index, value):
+        clean = self.clean(value)
+        param_name = '%s[%i]' % (self.remote_name, (self.first_index + index))
+        return (param_name, clean)
+
+class NumberedIntegerArrayParameter(NumberedArrayParameter, IntegerParameter):
+    pass

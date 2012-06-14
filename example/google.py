@@ -9,8 +9,8 @@ class ResponseModel(Model):
 
 class MozillaClientHostController(HostController):
 
-    def get_request_headers(self, method, url, get=None, post=None, instance=None):
-        d = super(MozillaClientHostController, self).get_request_headers(method, url, get=get, post=post)
+    def get_request_headers(self, method, url, get_data=None, post_data=None, instance=None):
+        d = super(MozillaClientHostController, self).get_request_headers(method, url, get_data=get_data, post_data=post_data, instance=instance)
         d['User-agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:13.0) Gecko/20100101 Firefox/13.0'
         d['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         return d
@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     ghc.read(search) # updates the search with the faux results after the response is received
 
-    print search.parameters('occurrences_of_the_word_pypi')
-    print search.occurrences_of_the_word_pypi
+    print search.parameters('occurrences_of_the_word_pypi').to_get() # Serialize our results for the fun of it
+    print search.occurrences_of_the_word_pypi # print out the raw value of our results
 
 
