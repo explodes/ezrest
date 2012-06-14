@@ -1,10 +1,4 @@
-'''
-Created on Jun 12, 2012
-
-@author: evan
-'''
 import unittest
-
 
 class Test(unittest.TestCase):
 
