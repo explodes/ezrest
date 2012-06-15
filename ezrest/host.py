@@ -17,7 +17,7 @@ class HostController(object):
         return self.request(instance, method, url, **kwargs)
 
     def get_create_method(self, instance):
-        return 'GET'
+        return 'POST'
 
     def get_create_kwargs(self, instance, *additional_locals):
         params = instance.create_parameters(*additional_locals)
@@ -115,13 +115,12 @@ class HostController(object):
         new_headers = self.get_request_headers(method, url, get_data=get, post_data=post, instance=instance)
         headers.update(**new_headers)
 
-        print 'RAW REQUEST: URL:', url
-        print 'RAW REQUEST: METHOD:', method
-        print 'RAW REQUEST: GET:', get
-        print 'RAW REQUEST: POST:', post
-        print 'RAW REQUEST: HEADERS:'
-        for d in headers.iteritems():
-            print '\t%s: %s' % d
+#        print '%s (%s) HTTP/x' % (method, url)
+#        for d in headers.iteritems():
+#            print '%s: %s' % d
+#        if post:
+#            print
+#            print post
 
         request = urllib2.Request(url, data=post, headers=headers)
         request.get_method = lambda: method

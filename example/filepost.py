@@ -28,7 +28,7 @@ class GoogleHostController(MozillaClientHostController, ResponseModelHostControl
 class FauxPost(ResponseModel):
 
     query = parameter.TextParameter(remote_name='q', read=True, create=True)
-    #upload = parameter.FileParameter('test.jpg', create=True)
+    upload = parameter.FileParameter(create=True)
 
     def __init__(self, query):
         self.query = query
@@ -45,8 +45,10 @@ class FauxPost(ResponseModel):
 if __name__ == '__main__':
     ghc = GoogleHostController()
     search = FauxPost('pypi ezrest')
-    #search.upload = '\x00\x44\x44\x09'
-    ghc.read(search) # updates the search with the faux results after the response is received
+    f = parameter.File(data='\x00\x44\x44\x09', file_name='fake.jpg')
+    print f, repr(f)
+    search.upload = f
+    ghc.create(search) # updates the search with the faux results after the response is received
 
     print search.parameters('occurrences_of_the_word_pypi').to_get() # Serialize our results for the fun of it
     print search.occurrences_of_the_word_pypi # print out the raw value of our results

@@ -64,7 +64,22 @@ class Parameter(object):
         return '%s %s' % (self.__class__.__name__, self.local_name)
 
     def __repr__(self):
-        return '%s(remote_name=%r, default=%r, create=%r, read=%r, update=%r, delete=%r)' % (self.__class__.__name__, self.remote_name, self.default, self.create, self.read, self.update, self.delete)
+        copy_vars = self._copy_vars()
+        var_tuples = []
+        for item in copy_vars.iteritems():
+            var_tuples.append('%s=%r' % item)
+        init_values = ', '.join(var_tuples)
+        return '%s(%s)' % (self.__class__.__name__, init_values)
+
+    def _copy_vars(self):
+        return dict(
+            remote_name=self.remote_name,
+            default=self.default,
+            create=self.create,
+            read=self.read,
+            update=self.update,
+            delete=self.delete,
+        )
 
 
 class TextParameter(Parameter):
@@ -122,31 +137,63 @@ class NumberedArrayParameter(UnnumberedArrayParameter):
         param_name = '%s[%i]' % (self.remote_name, (self.first_index + index))
         return (param_name, clean)
 
+    def _copy_vars(self):
+        d = super(NumberedArrayParameter, self)._copy_vars()
+        d['first_index'] = self.first_index
+        return d
+
 class NumberedIntegerArrayParameter(NumberedArrayParameter, IntegerParameter):
     pass
 
+class File(object):
+
+    def __init__(self, data=None, file_name=None, content_type='application/octet-stream'):
+        self.data = data
+        self.file_name = file_name
+        self.content_type = content_type
+
+    @property
+    def base64(self):
+        if hasattr(self.data, 'read'):
+            text = self.data.read()
+            if hasattr(self.data, 'seek'):
+                self.data.seek(0)
+        else:
+            text = self.data
+        return base64.b64encode(text)
+
+    def __str__(self):
+        return 'File %s' % (self.file_name)
+
+    def __repr__(self):
+        if self.data is None:
+            data_str = None
+        else:
+            data_str = '<Omitted %s chars>' % len(self.data)
+        return '%s(data=%s, file_name=%r, content_type=%r)' % (self.__class__.__name__, data_str, self.file_name, self.content_type)
 
 class FileParameter(Parameter):
 
-    def __init__(self, file_name, **kwargs):
-        self.file_name = file_name
-        super(FileParameter, self).__init__(**kwargs)
-
     def escape(self, value):
         if value:
-            return base64.b64encode(value)
+            return value.base64
+
+    def validate(self, value):
+        if not isinstance(value, File):
+            raise exceptions.ParameterValidationError('%s is not a File.' % value)
+        super(FileParameter, self).validate(value)
 
     def requires_multipart(self, value):
         return bool(value)
 
     def content_type(self, value):
-        return 'application/octet-stream'
+        return value.content_type
 
     def content_transfer_encoding(self, value):
         return 'base64'
 
     def content_disposition(self, value):
-        file_name = self.file_name() if callable(self.file_name) else self.file_name
-        return 'attachment; filename=%s' % file_name
+        file_name = value.file_name() if callable(value.file_name) else value.file_name
+        return 'form-data; name="%s"; filename="%s"' % (self.remote_name, file_name)
 
 
