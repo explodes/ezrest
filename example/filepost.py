@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from ezrest import host, model, parameter
 
 class ResponseModel(model.Model):
